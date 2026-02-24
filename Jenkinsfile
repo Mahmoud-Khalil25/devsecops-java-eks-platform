@@ -131,6 +131,38 @@ stage('Push Image to ECR') {
     '''
   }
 }
+    stage('Update GitOps Repo (Trigger CD)') {
+  steps {
+    withCredentials([usernamePassword(credentialsId: 'gitops-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PAT')]) {
+      sh '''
+        set -e
+
+        # GitOps repo (manifests repo watched by ArgoCD)
+        GITOPS_REPO_URL="https://github.com/Mahmoud-Khalil25/devsecops-java-eks-platform-manifests.git"
+        FILE="deployment.yaml"
+
+       
+        IMAGE_REPO="014887028517.dkr.ecr.eu-west-3.amazonaws.com/devsecops-java-app"
+        NEW_TAG="${IMAGE_TAG}"
+
+        rm -rf gitops-repo
+        git clone https://${GIT_USER}:${GIT_PAT}@${GITOPS_REPO_URL#https://} gitops-repo
+        cd gitops-repo
+
+        git checkout main || git checkout -b main
+        git config user.email "jenkins@local"
+        git config user.name  "jenkins"
+
+        # Update ONLY the image line
+        sed -i "s|^\\([[:space:]]*image:[[:space:]]*${IMAGE_REPO}:\\).*|\\1${NEW_TAG}|g" "$FILE"
+
+        git add "$FILE"
+        git commit -m "deploy: update image tag to ${NEW_TAG}" || echo "No changes to commit"
+        git push origin main
+      '''
+    }
+  }
+}
 
 
 
