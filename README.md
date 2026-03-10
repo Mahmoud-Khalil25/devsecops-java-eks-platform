@@ -36,8 +36,6 @@ The pipeline uses a **Jenkins master-agent model**.
 
 The Jenkins master orchestrates jobs while a dedicated **Jenkins slave agent executes build tasks, Docker operations, and security scans**.
 
-![Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
-
 ![Jenkins Nodes](docs/screenshots/jenkins-nodes.png)
 
 ---
@@ -58,8 +56,9 @@ The Jenkins pipeline automates the following stages:
 10. Trivy Container Image Scan  
 11. Push Image to AWS ECR  
 12. Update GitOps Repository  
-13. ArgoCD Deployment to EKS  
-
+13. ArgoCD Deployment to EKS
+  
+![Pipeline Excution](docs/screenshots/pipleline-excution.png)
 ---
 
 # Static Code Analysis (SonarQube)
@@ -78,8 +77,6 @@ Two scans are performed:
 
 • Filesystem scan before build  
 • Container image scan after Docker build
-
-![Trivy Scan](docs/screenshots/trivy-scan.png)
 
 ---
 
@@ -107,6 +104,10 @@ Jenkins updates the Kubernetes manifest repository with the new image tag, and *
 
 ![ArgoCD Application](docs/screenshots/argocd-application.png)
 
+Intentionally stopping autosync and autoheal features for testing purposes.
+
+![ArgoCD outofsync](docs/screenshots/outofsync.png)
+
 ---
 
 # Monitoring and Observability
@@ -115,7 +116,9 @@ Cluster monitoring is implemented using **Prometheus and Grafana**.
 
 The monitoring stack was deployed using the **kube-prometheus-stack Helm chart**.
 
-![Grafana Dashboard](docs/screenshots/grafana-dashboard.png)
+![Grafana Dashboard 1](docs/screenshots/grafana1.png)
+
+![Grafana Dashboard 2](docs/screenshots/grafana2.png)
 
 ---
 
