@@ -1,207 +1,148 @@
-# DevSecOps GitOps CI/CD Platform on AWS EKS
+# Enterprise DevSecOps CI/CD Pipeline on Amazon EKS
 
-End-to-end DevSecOps CI/CD pipeline that builds, scans, containerizes, and continuously deploys a Java application to Amazon EKS using GitOps with ArgoCD.
+This project demonstrates a complete **DevSecOps CI/CD platform** implementing secure application delivery from source code to Kubernetes deployment using **Jenkins, SonarQube, Trivy, AWS ECR, GitOps with ArgoCD, and Kubernetes monitoring with Prometheus and Grafana**.
 
----
-
-## 🚀 Project Overview
-
-This project demonstrates a production-style DevSecOps workflow integrating CI automation, security scanning, container registry, and GitOps-based Continuous Deployment to Kubernetes on AWS.
-
-The pipeline automates secure application delivery from source code to Kubernetes with zero manual deployment steps.
+The architecture follows **GitOps deployment principles**, automated security scanning, and Kubernetes observability.
 
 ---
 
-## 🏗 Architecture
+# Architecture Overview
 
-CI/CD flow:
+![Architecture](docs/architecture/devsecops-architecture.svg)
 
-1. Developer pushes code to GitHub  
-2. Jenkins pipeline builds and tests application  
-3. SonarQube performs static code analysis  
-4. Trivy scans filesystem and container image  
-5. Docker image pushed to AWS ECR  
-6. Jenkins updates GitOps manifests repository  
-7. ArgoCD detects change and deploys to EKS  
-8. Prometheus and Grafana monitor workload  
+Pipeline flow:
+
+Developer → GitHub → Jenkins Master → Jenkins Slave Agent → Maven Build → SonarQube Analysis → Trivy Security Scan → Docker Image Build → AWS ECR → GitOps Repository → ArgoCD → Amazon EKS → Prometheus → Grafana
 
 ---
 
-# 🔁 Continuous Deployment Implementation (GitOps + ArgoCD)
+# Infrastructure Setup
 
-## CD Strategy
+| Component | Instance Type | Purpose |
+|----------|---------------|--------|
+| Jenkins Master | t2.medium | CI/CD orchestrator |
+| Jenkins Slave | t2.medium | Build and pipeline execution |
+| SonarQube | t2.medium | Code quality analysis |
+| Bootstrap Server | t2.micro | EKS provisioning |
+| Amazon EKS | Managed | Kubernetes runtime |
 
-This project implements GitOps-based Continuous Deployment:
-
-- Kubernetes manifests stored in a separate Git repository  
-- Jenkins updates only the container image tag  
-- ArgoCD continuously watches the repository  
-- ArgoCD reconciles cluster state automatically  
-
-Git becomes the single source of truth for deployments.
-
----
-
-## 📂 GitOps Repository
-
-Deployment manifests are stored in a dedicated repository:
-
-devsecops-java-eks-platform-manifests
-
-Example Deployment image reference:
-
-image: <AWS_ACCOUNT_ID>.dkr.ecr.eu-west-3.amazonaws.com/devsecops-java-app:<TAG>
+All instances were deployed on **Ubuntu 24.04 EC2**.
 
 ---
 
-## ⚙ Jenkins CD Implementation
+# Jenkins Master-Agent Architecture
 
-The Jenkins pipeline triggers deployment by updating the container image tag inside the GitOps repository.
+The pipeline uses a **Jenkins master-agent model**.
 
-Steps performed by Jenkins:
+The Jenkins master orchestrates jobs while a dedicated **Jenkins slave agent executes build tasks, Docker operations, and security scans**.
 
-1. Clone GitOps repository  
-2. Update Deployment image tag  
-3. Commit change  
-4. Push to GitHub  
+![Jenkins Dashboard](docs/screenshots/jenkins-dashboard.png)
 
-Conceptual implementation:
-
-- git clone manifests repo  
-- update image tag in deployment.yaml  
-- git commit with new version  
-- git push  
-
-Only the image version changes while manifests remain immutable.
+![Jenkins Nodes](docs/screenshots/jenkins-nodes.png)
 
 ---
 
-## 🤖 ArgoCD Continuous Deployment
+# CI Pipeline Stages
 
-ArgoCD is configured with:
+The Jenkins pipeline automates the following stages:
 
-- Git repository URL (manifests repo)  
-- Kubernetes cluster (EKS)  
-- Auto-sync enabled  
-
-ArgoCD behavior:
-
-- Detects new commit in manifests repo  
-- Compares desired vs live state  
-- Updates Deployment image  
-- Performs rolling update in EKS  
-
-No manual kubectl or deployment scripts required.
-
----
-
-## 🔄 End-to-End Deployment Flow
-
-1. CI builds image devsecops-java-app:<BUILD_NUMBER>  
-2. Image pushed to AWS ECR  
-3. Jenkins updates GitOps repo image tag  
-4. Git commit triggers ArgoCD  
-5. ArgoCD syncs Kubernetes Deployment  
-6. Pods roll to new version  
-
-This enables zero-touch Continuous Deployment.
+1. Cleanup Workspace  
+2. Checkout Source Code  
+3. Compilation (Maven)  
+4. Unit Testing  
+5. Trivy Filesystem Security Scan  
+6. Build Application Package  
+7. SonarQube Code Analysis  
+8. Quality Gate Validation  
+9. Docker Image Build  
+10. Trivy Container Image Scan  
+11. Push Image to AWS ECR  
+12. Update GitOps Repository  
+13. ArgoCD Deployment to EKS  
 
 ---
 
-# 🔐 DevSecOps Controls in CD
+# Static Code Analysis (SonarQube)
 
-Continuous Deployment is protected by:
+SonarQube is integrated with Jenkins to enforce code quality checks and prevent low-quality builds from progressing through the pipeline.
 
-- SonarQube quality analysis  
-- Trivy filesystem scan  
-- Trivy container image scan  
-- Versioned immutable container images  
-- GitOps audit trail  
-
-Only scanned and versioned images are deployed to Kubernetes.
+![SonarQube Dashboard](docs/screenshots/sonarqube-dashboard.png)
 
 ---
 
-# ☸ Kubernetes Deployment
+# Security Scanning (Trivy)
 
-Application deployed to EKS as:
+Security scanning is integrated directly into the CI pipeline using **Trivy**.
 
-- Deployment  
-- Service  
-- Namespace  
+Two scans are performed:
 
-ArgoCD continuously maintains desired state.
+• Filesystem scan before build  
+• Container image scan after Docker build
 
----
-
-# 📊 Observability
-
-Monitoring stack integrated with Kubernetes:
-
-- Prometheus — metrics collection  
-- Grafana — dashboards  
-- Kubernetes workload monitoring  
-
-Provides visibility into application health after deployment.
+![Trivy Scan](docs/screenshots/trivy-scan.png)
 
 ---
 
-# 🧪 CI/CD Pipeline Stages
+# Container Registry (AWS ECR)
 
-1. Checkout source code  
-2. Maven build and unit tests  
-3. SonarQube static analysis  
-4. Trivy filesystem scan  
-5. Package application  
-6. Docker image build  
-7. Trivy image scan  
-8. Push image to AWS ECR  
-9. Update GitOps manifests repo  
-10. ArgoCD deploy to EKS  
+Docker images are pushed to **Amazon Elastic Container Registry (ECR)** after passing all security and quality checks.
+
+![ECR Repository](docs/screenshots/ecr-repository.png)
 
 ---
 
-# ☁ AWS Services Used
+# Kubernetes Cluster (Amazon EKS)
 
-- Amazon EKS — Kubernetes cluster  
-- Amazon ECR — container registry  
-- Amazon EC2 — Jenkins and SonarQube  
-- IAM — access control  
-- VPC — networking  
+The Kubernetes cluster was provisioned using **eksctl** and contains a managed node group for running workloads.
+
+![EKS Nodes](docs/screenshots/eks-nodes.png)
 
 ---
 
-# 📁 Repositories
+# GitOps Deployment (ArgoCD)
 
-Application source repository:  
-devsecops-java-eks-platform  
+The deployment follows **GitOps principles**.
 
-GitOps manifests repository:  
-devsecops-java-eks-platform-manifests  
+Jenkins updates the Kubernetes manifest repository with the new image tag, and **ArgoCD automatically synchronizes the desired state to the EKS cluster**.
 
----
-
-# ✅ Key DevOps Practices Demonstrated
-
-- GitOps Continuous Deployment  
-- Immutable container releases  
-- Automated Kubernetes delivery  
-- Integrated DevSecOps scanning  
-- Continuous reconciliation with ArgoCD  
-- Cloud-native deployment on AWS  
+![ArgoCD Application](docs/screenshots/argocd-application.png)
 
 ---
 
-# 📌 Project Status
+# Monitoring and Observability
 
-AWS infrastructure and EKS cluster were fully provisioned and validated during development.  
-Environment has been decommissioned to optimize cloud cost.  
-Pipeline code, manifests, and documentation remain available.
+Cluster monitoring is implemented using **Prometheus and Grafana**.
+
+The monitoring stack was deployed using the **kube-prometheus-stack Helm chart**.
+
+![Grafana Dashboard](docs/screenshots/grafana-dashboard.png)
 
 ---
 
-# 👨‍💻 Author
+# Skills Demonstrated
+
+• Jenkins pipeline design  
+• DevSecOps security integration  
+• GitOps continuous deployment  
+• Kubernetes cluster deployment  
+• Container registry management  
+• Infrastructure provisioning using eksctl  
+• Monitoring with Prometheus and Grafana  
+
+---
+
+# Project Status
+
+This repository documents the architecture, pipeline design, and captured results of the DevSecOps platform implementation.
+
+The cloud infrastructure used during development has been **decommissioned**, but the repository preserves the full design, configuration steps, and deployment workflow.
+
+---
+
+# Author
 
 Mahmoud Khalil  
-DevOps Engineer — Kubernetes & AWS  
-GitHub: https://github.com/Mahmoud-Khalil25
+DevOps Engineer
+
+LinkedIn:  
+https://www.linkedin.com/in/mahmoud-ahmed-14a011190
